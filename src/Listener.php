@@ -88,32 +88,35 @@
 		 */
 		public function setNotification($callableOrArray) {
 			if (is_callable($callableOrArray) || is_array($callableOrArray) || ($callableOrArray instanceof Closure)) {
-				echo "Notificy set\n";
 				$this->_caller = $callableOrArray;
 			}
 		}
 		
+		/**
+		 * resets the interrupt signal
+		 */
 		public function reset() {
 			$this->_interrupt = 0;
 		}
 		
 		/**
 		 * Called on interruption
+		 * @return null|int
 		 */
-		protected function _notify() {
+		public function notify() {
 			declare(ticks=1);
 			if (is_array($this->_caller) && !empty($this->_caller)) {
 				// array
-				$params = isset($this->_caller[1]) ? $this->_caller[1] : [];
-				call_user_func_array($this->_caller[0], $params);
+				return call_user_func_array($this->_caller, [$this->_interrupt]);
 			} else if ($this->_caller instanceof Closure) {
 				// closure
-				$this->_caller->call($this, $this->_interrupt);
+				return $this->_caller->call($this, $this->_interrupt);
 			} else if (is_callable($this->_caller)) {
 				// callable
 				$cl = Closure::fromCallable($this->_caller);
-				$cl->call($this,$this->_interrupt);
+				return $cl->call($this,$this->_interrupt);
 			}
+			return null;
 		}
 		
 		/**
@@ -154,7 +157,7 @@
 			if ($name === 'interrupt' && $this->hasSignal($value)) {
 				// set interrupt signal and notify
 				$this->_interrupt = (int)$value;
-				$this->_notify();
+				$this->notify();
 			} else if ($name === 'name') {
 				$this->name($value);
 			}
@@ -174,6 +177,10 @@
 			}
 		}
 		
+		/**
+		 * @return string
+		 * @see Listener::$name
+		 */
 		public function __toString() {
 			return $this->name;
 		}
